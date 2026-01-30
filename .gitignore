@@ -1,0 +1,42 @@
+# Build output
+/bin/
+/bin/**
+
+# RGBDS intermediates
+*.o
+*.obj
+*.sym
+*.map
+*.lst
+*.tmp
+
+# ROM images
+*.gb
+*.gbc
+
+# Emulator saves / states
+*.sav
+*.srm
+*.rtc
+*.state
+*.sn*
+*.st?
+
+# Logs / debug dumps
+*.log
+*.dmp
+*.dump
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Emulicious
+.emulicious/
+emulicious.ini
+
