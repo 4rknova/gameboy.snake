@@ -11,7 +11,7 @@ This project is intentionally simple and “hardware-correct”:
 
 ## Project layout
 
-~~~
+```
 .
 ├── art/                  # Source art (tiles, palettes, etc.)
 ├── bin/                  # Build outputs
@@ -26,13 +26,13 @@ This project is intentionally simple and “hardware-correct”:
     ├── rgbfix
     ├── rgbgfx
     └── emulicious/
-~~~
+```
 
 ## Build
 
-~~~shell
+```shell
 make
-~~~
+```
 
 Outputs are written to `./bin/`:
 - `bin/snake.gb`  (ROM)
@@ -40,17 +40,17 @@ Outputs are written to `./bin/`:
 - `bin/snake.map` (link map)
 
 Clean:
-~~~shell
+```shell
 make clean
-~~~
+```
 
 ## Run (optional)
 
-The Makefile includes a `run` target configured for Emulicious via Wine:
+The Makefile includes a `run` target configured to use Emulicious:
 
-~~~shell
+```shell
 make run
-~~~
+```
 
 If you use a different emulator, just open `bin/snake.gb`.
 

@@ -1,0 +1,35 @@
+name: Release ROM
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make tools executable
+        run: chmod +x tools/rgbasm tools/rgblink tools/rgbfix tools/rgbgfx || true
+
+      - name: Build
+        run: |
+          make clean
+          make
+
+      - name: Create GitHub Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            bin/*.gb
+            bin/*.sym
+            bin/*.map
+
