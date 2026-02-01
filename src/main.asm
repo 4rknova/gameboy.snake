@@ -152,7 +152,7 @@ MainLoop:                          ; Frame loop
     ld a, 1                        ; rebuild flag
     ld [wNeedRebuild], a           ; request rebuild
 .DoneOver:                         ; done
-    jr MainLoop                    ; loop
+    jp MainLoop                    ; loop
 
 ; -----------------------------------------------------------------------------
 ; Rebuild handler (VBlank-only): LCD OFF -> build -> LCD ON
