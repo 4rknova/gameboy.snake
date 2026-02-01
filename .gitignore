@@ -14,6 +14,10 @@
 *.gb
 *.gbc
 
+# Sprte sheets / graphics intermediates
+*.2bpp
+*.png~
+
 # Emulator saves / states
 *.sav
 *.srm
@@ -38,5 +42,4 @@ Thumbs.db
 
 # Emulicious
 .emulicious/
-emulicious.ini
-
+Emulicious.ini
