@@ -29,7 +29,7 @@ DEF DIR_LEFT     EQU 3             ; Left
 
 DEF TILE_EMPTY   EQU $00           ; Tile 0x00: space (font)
 DEF TILE_WALL    EQU $E1           ; Tile 0xE1: solid block
-DEF TILE_SNAKE   EQU $F0           ; Tile 0xF0: snake segment
+DEF TILE_SNAKE   EQU $E1           ; Tile 0xF0: snake segment
 DEF TILE_FOOD    EQU $E3           ; Tile 0xE3: food
 
 DEF JOY_RIGHT    EQU 0             ; Right
