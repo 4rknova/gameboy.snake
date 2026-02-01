@@ -8,10 +8,12 @@
 #   make clean
 # --------------------------------------------------------------------
 
+ARTDIR ?= art
 OUTDIR ?= bin
 SRCDIR ?= src
 OUTDIR ?= bin
 LIBDIR ?= lib
+RESDIR ?= res
 TOOLSDIR ?= tools
 
 NAME   ?= snake
@@ -20,6 +22,7 @@ SRC    ?= $(SRCDIR)/main.asm
 RGBASM  := $(TOOLSDIR)/rgbasm
 RGBLINK := $(TOOLSDIR)/rgblink
 RGBFIX  := $(TOOLSDIR)/rgbfix
+RGBGFX  := $(TOOLSDIR)/rgbgfx
 EMU     := java -jar $(TOOLSDIR)/emulicious/Emulicious.jar
 
 OBJ := $(OUTDIR)/main.o
@@ -38,8 +41,18 @@ rom: $(ROM)
 $(OUTDIR):
 	@mkdir -p $(OUTDIR)
 
+$(RESDIR):
+	@mkdir -p $(RESDIR)
+
+# Convert tiles PNG to 2bpp
+TILES_PNG  := $(ARTDIR)/tiles.png
+TILES_2BPP := $(RESDIR)/tiles.2bpp
+
+$(TILES_2BPP): $(TILES_PNG) | $(RESDIR)
+	$(RGBGFX) -o $@ -L 0,0:16,16 $<
+
 # Assemble
-$(OBJ): $(SRC) | $(OUTDIR)
+$(OBJ): $(SRC) $(TILES_2BPP) | $(OUTDIR)
 	$(RGBASM) -Wall -i $(LIBDIR) -o $@ $<
 
 # Link + Fix header/checksums
@@ -53,3 +66,4 @@ run: $(ROM)
 
 clean:
 	@rm -rf $(OUTDIR)
+	@rm -rf $(RESDIR)
