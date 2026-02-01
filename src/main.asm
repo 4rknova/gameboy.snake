@@ -124,6 +124,18 @@ MainLoop:                          ; Frame loop
     jr MainLoop                    ; loop
 
 .S_Play:                           ; Play logic
+    ld a, [wJoyPressed]            ; edges
+    bit JOY_START, a               ; Start?
+    jr z, .NoPauseToggle           ; no
+    ld a, [wPaused]                ; paused?
+    xor 1                          ; toggle
+    ld [wPaused], a                ; store
+    ld a, 1                        ; mark pause draw
+    ld [wPauseDirty], a            ; request overlay update
+.NoPauseToggle:                    ; done toggle
+    ld a, [wPaused]                ; paused?
+    or a                           ; flags
+    jr nz, .DonePlay               ; if paused, skip update
     call UpdateDirectionFromHeld   ; update direction
     ld a, [wMoveCounter]           ; tick counter
     inc a                          ; ++
@@ -232,6 +244,8 @@ InitPlayScreen:                    ; play build
     ld [wSnakeLen], a              ; store
     xor a                          ; A=0
     ld [wMoveCounter], a           ; reset pacing
+    ld [wPaused], a                ; clear pause
+    ld [wPauseDirty], a            ; clear pause dirty
     ld [wDirtyFlags], a            ; clear dirty
 
     ld a, DIR_RIGHT                ; dir=right
@@ -905,6 +919,8 @@ wFrame:         ds 1               ; title blink frame
 wBlink:         ds 1               ; title blink toggle
 
 wMoveCounter:   ds 1               ; move pacing
+wPaused:        ds 1               ; pause flag
+wPauseDirty:    ds 1               ; pause overlay dirty
 wDir:           ds 1               ; direction
 wSnakeLen:      ds 1               ; length
 
