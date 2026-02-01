@@ -27,23 +27,10 @@ DEF DIR_RIGHT    EQU 1             ; Right
 DEF DIR_DOWN     EQU 2             ; Down
 DEF DIR_LEFT     EQU 3             ; Left
 
-DEF TILE_EMPTY   EQU 0             ; Tile 0: empty
-DEF TILE_WALL    EQU 1             ; Tile 1: wall
-DEF TILE_SNAKE   EQU 2             ; Tile 2: snake
-DEF TILE_FOOD    EQU 3             ; Tile 3: food
-
-DEF TILE_A       EQU 4             ; Tile 4: 'A'
-DEF TILE_E       EQU 5             ; Tile 5: 'E'
-DEF TILE_G       EQU 6             ; Tile 6: 'G'
-DEF TILE_K       EQU 7             ; Tile 7: 'K'
-DEF TILE_M       EQU 8             ; Tile 8: 'M'
-DEF TILE_N       EQU 9             ; Tile 9: 'N'
-DEF TILE_O       EQU 10            ; Tile 10:'O'
-DEF TILE_P       EQU 11            ; Tile 11:'P'
-DEF TILE_R       EQU 12            ; Tile 12:'R'
-DEF TILE_S       EQU 13            ; Tile 13:'S'
-DEF TILE_T       EQU 14            ; Tile 14:'T'
-DEF TILE_V       EQU 15            ; Tile 15:'V'
+DEF TILE_EMPTY   EQU $00           ; Tile 0x00: space (font)
+DEF TILE_WALL    EQU $E1           ; Tile 0xE1: solid block
+DEF TILE_SNAKE   EQU $F0           ; Tile 0xF0: snake segment
+DEF TILE_FOOD    EQU $E3           ; Tile 0xE3: food
 
 DEF JOY_RIGHT    EQU 0             ; Right
 DEF JOY_LEFT     EQU 1             ; Left
@@ -101,6 +88,7 @@ MainLoop:                          ; Frame loop
     call DoPendingRebuildInVBlank  ; Handle queued rebuilds (LCD off bulk)
     call TitleBlinkInVBlank        ; Title blink (few writes)
     call RenderDirtyInVBlank       ; Play dirty updates (few writes)
+    call PauseOverlayInVBlank      ; Pause overlay (few writes)
     call WaitVBlankEnd             ; Exit VBlank
 
     call ReadJoypad                ; Poll joypad
@@ -124,6 +112,13 @@ MainLoop:                          ; Frame loop
     jr MainLoop                    ; loop
 
 .S_Play:                           ; Play logic
+    ld a, [wIgnoreStart]           ; ignore first start?
+    or a                           ; any?
+    jr z, .CheckPauseStart         ; no -> check start
+    xor a                          ; A=0
+    ld [wIgnoreStart], a           ; clear ignore flag
+    jr .NoPauseToggle              ; skip toggle this frame
+.CheckPauseStart:                  ; check pause toggle
     ld a, [wJoyPressed]            ; edges
     bit JOY_START, a               ; Start?
     jr z, .NoPauseToggle           ; no
@@ -246,6 +241,8 @@ InitPlayScreen:                    ; play build
     ld [wMoveCounter], a           ; reset pacing
     ld [wPaused], a                ; clear pause
     ld [wPauseDirty], a            ; clear pause dirty
+    ld a, 1                        ; ignore start on first play frame
+    ld [wIgnoreStart], a           ; set ignore flag
     ld [wDirtyFlags], a            ; clear dirty
 
     ld a, DIR_RIGHT                ; dir=right
@@ -582,6 +579,39 @@ RenderDirtyInVBlank:               ; apply dirty writes
     ret                            ; return
 
 ; -----------------------------------------------------------------------------
+; Pause overlay (VBlank-only): draw/clear "- PAUSED -"
+; -----------------------------------------------------------------------------
+
+PauseOverlayInVBlank:              ; update pause overlay
+    ld a, [wState]                 ; state
+    cp STATE_PLAY                  ; only play
+    jr z, .InPlay                  ; ok
+    xor a                          ; A=0
+    ld [wPauseDirty], a            ; clear pending
+    ret                            ; return
+.InPlay:                           ; in play
+    ld a, [wPauseDirty]            ; pending?
+    or a                           ; any?
+    ret z                          ; no
+    ld a, [wPaused]                ; paused?
+    or a                           ; flags
+    jr z, .Clear                   ; if not, clear text
+    ld b, 9                        ; y
+    ld c, 5                        ; x
+    ld de, StrPaused               ; "- PAUSED -"
+    call BlitTextASCII             ; draw
+    jr .Done                       ; done
+.Clear:                            ; erase
+    ld b, 9                        ; y
+    ld c, 5                        ; x
+    ld de, StrSpaces10             ; spaces
+    call BlitTextASCII             ; clear
+.Done:                             ; finish
+    xor a                          ; A=0
+    ld [wPauseDirty], a            ; clear pending
+    ret                            ; return
+
+; -----------------------------------------------------------------------------
 ; Direction update (held d-pad), disallow reverse
 ; -----------------------------------------------------------------------------
 
@@ -778,7 +808,7 @@ Random8:                           ; tiny PRNG (state + DIV)
     ret                            ; return A
 
 ; -----------------------------------------------------------------------------
-; Text blitter (A..Z + space), caller must be LCD off or VBlank
+; Text blitter (ASCII 0x20..0x7F), caller must be LCD off or VBlank
 ; -----------------------------------------------------------------------------
 
 BlitTextASCII:                     ; B=y, C=x, DE=0-terminated ASCII
@@ -790,20 +820,15 @@ BlitTextASCII:                     ; B=y, C=x, DE=0-terminated ASCII
     inc de                         ; advance
     or a                           ; NUL?
     ret z                          ; done
-    cp " "                         ; space?
-    jr z, .Space                   ; handle
-    sub "A"                        ; index
-    ld c, a                        ; C=index
-    ld b, 0                        ; B=0
-    push hl                        ; save dest
-    ld hl, FontMapAtoZ             ; map
-    add hl, bc                     ; &map[index]
-    ld a, [hl]                     ; tile
-    pop hl                         ; restore dest
+    cp " "                         ; below space?
+    jr c, .Space                   ; map to space
+    cp $80                         ; beyond 0x7F?
+    jr nc, .Space                  ; map to space
+    sub " "                        ; ASCII -> tile index
     ld [hli], a                    ; write
     jr .Loop                       ; next
-.Space:                            ; space
-    xor a                          ; TILE_EMPTY
+.Space:                            ; space/unsupported
+    xor a                          ; TILE_EMPTY (space)
     ld [hli], a                    ; write
     jr .Loop                       ; next
 
@@ -898,7 +923,6 @@ Memcpy:                            ; HL->DE, BC bytes
 SECTION "ROData", ROM0             ; Read only data section
 INCLUDE "db/build.inc"             ; Build info    
 INCLUDE "db/game.inc"              ; Game constants
-INCLUDE "db/fontmap.inc"           ; Font map A..Z
 INCLUDE "db/tiles.inc"             ; Tile definitions
 
 ; -----------------------------------------------------------------------------
@@ -921,6 +945,7 @@ wBlink:         ds 1               ; title blink toggle
 wMoveCounter:   ds 1               ; move pacing
 wPaused:        ds 1               ; pause flag
 wPauseDirty:    ds 1               ; pause overlay dirty
+wIgnoreStart:   ds 1               ; ignore first start edge in play
 wDir:           ds 1               ; direction
 wSnakeLen:      ds 1               ; length
 
