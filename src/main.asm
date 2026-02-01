@@ -131,7 +131,11 @@ MainLoop:                          ; Frame loop
     ld a, [wPaused]                ; paused?
     or a                           ; flags
     jr nz, .DonePlay               ; if paused, skip update
+    ld a, [wDirChanged]            ; direction changed this step?
+    or a                           ; any?
+    jr nz, .SkipDirUpdate          ; yes -> skip
     call UpdateDirectionFromHeld   ; update direction
+.SkipDirUpdate:                    ; done update
     ld a, [wMoveCounter]           ; tick counter
     inc a                          ; ++
     ld [wMoveCounter], a           ; store
@@ -139,6 +143,7 @@ MainLoop:                          ; Frame loop
     jr c, .DonePlay                ; not yet
     xor a                          ; A=0
     ld [wMoveCounter], a           ; reset
+    ld [wDirChanged], a            ; allow next turn after move
     call StepSnakeLogic            ; advance snake (no VRAM)
 .DonePlay:                         ; done
     jr MainLoop                    ; loop
@@ -241,6 +246,7 @@ InitPlayScreen:                    ; play build
     ld [wMoveCounter], a           ; reset pacing
     ld [wPaused], a                ; clear pause
     ld [wPauseDirty], a            ; clear pause dirty
+    ld [wDirChanged], a            ; clear direction change latch
     ld a, 1                        ; ignore start on first play frame
     ld [wIgnoreStart], a           ; set ignore flag
     ld [wDirtyFlags], a            ; clear dirty
@@ -637,11 +643,15 @@ UpdateDirectionFromHeld:           ; update direction
     ld b, DIR_LEFT                 ; cand
 .Try:                              ; apply if not reverse
     ld a, [wDir]                   ; current
+    cp b                           ; same?
+    ret z                          ; no change
     xor 2                          ; opposite
     cp b                           ; candidate==opposite?
     ret z                          ; ignore reverse
     ld a, b                        ; new dir
     ld [wDir], a                   ; store
+    ld a, 1                        ; latch change this step
+    ld [wDirChanged], a            ; store
     ret                            ; return
 
 ; -----------------------------------------------------------------------------
@@ -946,6 +956,7 @@ wMoveCounter:   ds 1               ; move pacing
 wPaused:        ds 1               ; pause flag
 wPauseDirty:    ds 1               ; pause overlay dirty
 wIgnoreStart:   ds 1               ; ignore first start edge in play
+wDirChanged:    ds 1               ; direction changed this step
 wDir:           ds 1               ; direction
 wSnakeLen:      ds 1               ; length
 
